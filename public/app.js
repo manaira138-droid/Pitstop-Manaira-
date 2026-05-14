@@ -2,6 +2,7 @@ let products = [];
 let categories = [];
 let cart = [];
 let currentCategory = 'Todos';
+let currentSearch = '';
 let whatsappNumber = '5583999999999';
 let isStoreOpen = true;
 
@@ -35,12 +36,42 @@ function setCategory(name) {
   renderProducts();
 }
 
+
 function renderProducts() {
-  const list = currentCategory === 'Todos' ? products : products.filter(p => p.category_name === currentCategory);
-  const container = document.getElementById('products');
+  let list = products;
+
+  // Filtrar por categoria
+  if (currentCategory !== 'Todos') {
+    list = list.filter(
+      p => p.category_name === currentCategory
+    );
+  }
+
+  // Filtrar por texto digitado
+  if (currentSearch.trim()) {
+    const term =
+      currentSearch
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    list = list.filter(product => {
+      const name =
+        String(product.name || '')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+
+      return name.includes(term);
+    });
+  }
+
+  const container =
+    document.getElementById('products');
 
   if (!list.length) {
-    container.innerHTML = '<p class="empty">Nenhum produto disponível nessa categoria.</p>';
+    container.innerHTML =
+      '<p class="empty">Nenhum produto encontrado.</p>';
     return;
   }
 
@@ -48,23 +79,48 @@ function renderProducts() {
     ? `<div class="closed-notice">No momento estamos fechados para pedidos.</div>`
     : '';
 
-  container.innerHTML = closedNotice + list.map(product => `
-    <article class="product">
-      <div class="product-img">${product.image ? `<img src="${product.image}" alt="${product.name}">` : '🍔'}</div>
-      <div class="product-body">
-        <span class="category">${product.category_name || 'Produto'}</span>
-        <h3>${product.name}</h3>
-        <p>${product.description || 'Produto delicioso preparado com qualidade.'}</p>
-        <div class="product-footer">
-          <strong class="price">${money(product.price)}</strong>
-          <button class="add" onclick="addToCart(${product.id})" ${!isStoreOpen ? 'disabled' : ''}>
-            ${isStoreOpen ? 'Adicionar' : 'Loja fechada'}
-          </button>
+  container.innerHTML =
+    closedNotice +
+    list.map(product => `
+      <article class="product">
+        <div class="product-img">
+          ${product.image
+            ? `<img src="${product.image}" alt="${product.name}">`
+            : '🍺'}
         </div>
-      </div>
-    </article>
-  `).join('');
+        <div class="product-body">
+          <span class="category">
+            ${product.category_name || 'Produto'}
+          </span>
+
+          <h3>${product.name}</h3>
+
+          <p>
+            ${product.description ||
+              'Produto delicioso preparado com qualidade.'}
+          </p>
+
+          <div class="product-footer">
+            <strong class="price">
+              ${money(product.price)}
+            </strong>
+
+            <button
+              class="add"
+              onclick="addToCart(${product.id})"
+              ${!isStoreOpen ? 'disabled' : ''}
+            >
+              ${isStoreOpen
+                ? 'Adicionar'
+                : 'Loja fechada'}
+            </button>
+          </div>
+        </div>
+      </article>
+    `).join('');
 }
+
+
 
 function addToCart(id) {
   if (!isStoreOpen) {
@@ -204,3 +260,10 @@ document.getElementById('checkoutForm').addEventListener('submit', sendOrder);
 loadData().catch(() => {
   document.getElementById('products').innerHTML = '<p>Não foi possível carregar o cardápio.</p>';
 });
+
+document
+  .getElementById('productSearch')
+  ?.addEventListener('input', function () {
+    currentSearch = this.value;
+    renderProducts();
+  });

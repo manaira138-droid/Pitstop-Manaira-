@@ -5,9 +5,13 @@ const multer = require('multer');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { getDb } = require('./src/db');
+const https = require('https');
 
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
+const XLSX = require('xlsx');
+const axios = require('axios');
+const puppeteer = require('puppeteer');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -48,10 +52,18 @@ app.use(session({
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
-    const ok = ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype);
+    const allowed = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+
+    const ok = allowed.includes(file.mimetype);
+
     cb(ok ? null : new Error('Formato inválido'), ok);
   },
-  limits: { fileSize: 3 * 1024 * 1024 }
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 function uploadToCloudinary(buffer) {
@@ -70,6 +82,254 @@ function uploadToCloudinary(buffer) {
     streamifier.createReadStream(buffer).pipe(stream);
   });
 }
+
+
+async function uploadImageFromUrl(imageUrl) {
+
+  return new Promise((resolve, reject) => {
+
+    https.get(imageUrl, response => {
+
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'pitstop-manaira/produtos',
+          resource_type: 'image'
+        },
+        (error, result) => {
+
+          if (error) {
+            return reject(error);
+          }
+
+          resolve(result.secure_url);
+        }
+      );
+
+      response.pipe(stream);
+
+    }).on('error', reject);
+  });
+}
+
+
+async function searchGoogleImage(query, ean = '') {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox'
+    ]
+  });
+
+  try {
+    const page = await browser.newPage();
+
+    await page.setViewport({
+      width: 1366,
+      height: 768
+    });
+
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'
+    );
+
+    const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}`;
+
+    console.log('URL Bing:', url);
+
+    await page.goto(url, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    const result = await page.evaluate((ean) => {
+      const anchors = Array.from(document.querySelectorAll('.iusc'));
+      const urls = [];
+
+      for (const a of anchors) {
+        try {
+          const meta = JSON.parse(a.getAttribute('m') || '{}');
+
+          if (
+            meta.murl &&
+            meta.murl.startsWith('http') &&
+            !meta.murl.includes('mm.bing.net')
+          ) {
+            urls.push(meta.murl);
+          }
+        } catch {}
+      }
+
+      const primeiros = urls.slice(0, 5);
+
+      const bons = [
+        'vtex',
+        'vtexassets',
+        'vteximg',
+        'tcdn',
+        'mlstatic',
+        'mercadolivre',
+        'redemix',
+        'covabra',
+        'carrefour',
+        'supermercadosbh',
+        'muffatosupermercados',
+        'angeloni',
+        'atacadao',
+        'paodeacucar',
+        'amazonaws',
+        'agilecdn',
+        'bluesoft',
+        'rappi',
+        'ifood',
+        'isoplast',
+        'shopify'
+      ];
+
+      const ruins = [
+        'pinimg',
+        'pinterest',
+        'tumblr',
+        'xhamster',
+        'xhcdn',
+        'porn',
+        'xxx',
+        'tenor',
+        'geocities',
+        'wallpaper',
+        'wallpapercave',
+        'alphacoders',
+        'freepik',
+        'template',
+        'wikimedia',
+        'reddit',
+        'instagram',
+        'facebook',
+        'lookaside',
+        'blogspot',
+        'blogger',
+        'youtube',
+        'ytimg',
+        'istockphoto',
+        'shutterstock',
+        'dreamstime',
+        'ftcdn',
+        'news',
+        'scribd',
+        'goodfon',
+        'onlygirls',
+        'anime',
+        'serebii',
+        'medical',
+        'carwallpapers',
+        'stablediffusion',
+        'deviantart',
+        'wallpapers',
+        'clipart',
+        'calendar',
+        'worthpoint',
+        'worldatlas',
+        'udocz',
+        'calendar',
+        'prezi',
+        'scribd',
+        'poultry',
+        'blog',
+        'wordpress',
+        'glbimg',
+        'wixstatic',
+        'linkedin',
+        'coloring',
+        'vexels',
+        'collegepill',
+        'erome',
+        'wallpapers',
+        'deviantart',
+        'istock',
+        'smartsheet',
+        'madebyteachers'
+      ];
+
+      const scoreUrl = (link) => {
+        const u = String(link || '').toLowerCase();
+
+        if (!u || u.includes('mm.bing.net')) return -999;
+
+        let score = 0;
+
+        // Se a URL contiver códigos numéricos e nenhum deles
+        // for igual ao EAN do produto atual, penaliza fortemente.
+        if (ean && /\d{8,14}/.test(u)) {
+          const numerosNaUrl = u.match(/\d{8,14}/g) || [];
+
+          const temOutroCodigo =
+            numerosNaUrl.length > 0 &&
+            !numerosNaUrl.includes(String(ean));
+
+          if (temOutroCodigo) {
+            score -= 150;
+          }
+        }
+
+        if (bons.some(d => u.includes(d))) score += 100;
+        if (ruins.some(d => u.includes(d))) score -= 100;
+
+        if (u.includes('/produto') || u.includes('/produtos')) score += 20;
+        if (u.includes('/product') || u.includes('/products')) score += 20;
+        if (u.includes('/arquivos/ids/')) score += 20;
+        if (u.includes('/uploads/')) score += 10;
+        if (u.includes('/media/catalog/product/')) score += 25;
+        if (u.includes('/image/cache/catalog/')) score += 25;
+
+        if (u.includes('1000') || u.includes('1200') || u.includes('1500')) score += 10;
+
+        if (u.endsWith('.jpg') || u.includes('.jpg?')) score += 5;
+        if (u.endsWith('.jpeg') || u.includes('.jpeg?')) score += 5;
+        if (u.endsWith('.png') || u.includes('.png?')) score += 5;
+        if (u.endsWith('.webp') || u.includes('.webp?')) score += 5;
+
+        return score;
+      };
+
+      const ordenadas = primeiros
+        .map(url => ({
+          url,
+          score: scoreUrl(url)
+        }))
+        .sort((a, b) => b.score - a.score);
+
+      const melhor = ordenadas[0];
+
+      return {
+        totalImgs: urls.length,
+        urls: primeiros,
+        scores: ordenadas,
+        first: melhor && melhor.score >= 80 ? melhor.url : ''
+      };
+    }, ean);
+
+    console.log('Total imgs Bing:', result.totalImgs);
+    console.log('Primeiras URLs:', result.urls);
+    console.log('Pontuação:', result.scores);
+    console.log('Imagem escolhida:', result.first || 'Nenhuma imagem confiável');
+
+    if (result.totalImgs <= 1) {
+      console.log('⚠️ Poucos resultados. Ignorando essa busca.');
+      return '';
+    }
+
+    return result.first || '';
+
+  } catch (err) {
+    console.log('Erro Bing Puppeteer:', err.message);
+    return '';
+  } finally {
+    await browser.close();
+  }
+}
+
 
 // ================= AUTH =================
 
@@ -189,13 +449,20 @@ app.get('/api/products', async (req, res) => {
 
   const rows = await db.all(`
     SELECT 
-      p.*,
+      p.id,
+      p.codigo_barras,
+      p.nome_descricao AS name,
+      '' AS description,
+      p.preco AS price,
+      p.image_url,
       p.image_url AS image,
+      p.active,
+      p.category_id,
       c.name AS category_name
     FROM products p
     LEFT JOIN categories c ON c.id = p.category_id
     WHERE p.active = 1
-    ORDER BY p.featured DESC, p.id DESC
+    ORDER BY p.id DESC
   `);
 
   res.json(rows);
@@ -287,8 +554,16 @@ app.get('/api/admin/products', requireAuth, async (req, res) => {
 
   const rows = await db.all(`
     SELECT 
-      p.*,
+      p.id,
+      p.codigo_barras,
+      p.nome_descricao AS name,
+      '' AS description,
+      p.preco AS price,
+      p.image_url,
       p.image_url AS image,
+      p.active,
+      0 AS featured,
+      p.category_id,
       c.name AS category_name
     FROM products p
     LEFT JOIN categories c ON c.id = p.category_id
@@ -298,98 +573,148 @@ app.get('/api/admin/products', requireAuth, async (req, res) => {
   res.json(rows);
 });
 
+
+
+
 app.post('/api/admin/products', requireAuth, upload.single('image'), async (req, res) => {
   const db = await getDb();
 
-  const name = String(req.body.name || '').trim();
-  const description = String(req.body.description || '').trim();
-  const price = Number(req.body.price || 0);
+  const codigo_barras = String(req.body.codigo_barras || '').trim();
+  const nome_descricao = String(req.body.nome_descricao || '').trim();
+  const preco = Number(req.body.preco || 0);
   const category_id = Number(req.body.category_id || 0) || null;
   const active = req.body.active === '0' ? 0 : 1;
-  const featured = req.body.featured === '1' ? 1 : 0;
+
   let image = '';
 
   if (req.file) {
     image = await uploadToCloudinary(req.file.buffer);
   }
 
-  if (!name) return res.status(400).json({ error: 'Nome obrigatório' });
-  if (!price || price <= 0) return res.status(400).json({ error: 'Preço inválido' });
+  if (!nome_descricao) {
+    return res.status(400).json({ error: 'Nome obrigatório' });
+  }
+
+  if (!preco || preco <= 0) {
+    return res.status(400).json({ error: 'Preço inválido' });
+  }
 
   const result = await db.get(`
     INSERT INTO products (
-      name, description, price, category_id, image_url, active, featured
+      codigo_barras,
+      nome_descricao,
+      category_id,
+      preco,
+      image_url,
+      active
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING id
-  `, [name, description, price, category_id, image, active, featured]);
+  `, [
+    codigo_barras,
+    nome_descricao,
+    category_id,
+    preco,
+    image,
+    active
+  ]);
 
   await logAudit(req, 'criou produto', {
     id: result.id,
-    nome: name,
-    preco: price
+    nome: nome_descricao,
+    preco
   });
 
   res.json({ ok: true, id: result.id });
 });
+
+
+
+
+
 
 app.put('/api/admin/products/:id', requireAuth, upload.single('image'), async (req, res) => {
   const db = await getDb();
 
   const id = Number(req.params.id);
 
-  const current = await db.get(`SELECT * FROM products WHERE id = $1`, [id]);
-  if (!current) return res.status(404).json({ error: 'Produto não encontrado' });
+  const current = await db.get(`
+    SELECT * FROM products WHERE id = $1
+  `, [id]);
 
-  const name = String(req.body.name || '').trim();
-  const description = String(req.body.description || '').trim();
-  const price = Number(req.body.price || 0);
+  if (!current) {
+    return res.status(404).json({ error: 'Produto não encontrado' });
+  }
+
+  const codigo_barras = String(req.body.codigo_barras || '').trim();
+  const nome_descricao = String(req.body.nome_descricao || '').trim();
+  const preco = Number(req.body.preco || 0);
   const category_id = Number(req.body.category_id || 0) || null;
   const active = req.body.active === '1' ? 1 : 0;
-  const featured = req.body.featured === '1' ? 1 : 0;
+
   let image = current.image_url;
 
   if (req.file) {
     image = await uploadToCloudinary(req.file.buffer);
   }
 
-  if (!name) return res.status(400).json({ error: 'Nome obrigatório' });
-  if (!price || price <= 0) return res.status(400).json({ error: 'Preço inválido' });
+  if (!nome_descricao) {
+    return res.status(400).json({ error: 'Nome obrigatório' });
+  }
+
+  if (!preco || preco <= 0) {
+    return res.status(400).json({ error: 'Preço inválido' });
+  }
 
   await db.run(`
     UPDATE products
-    SET 
-      name = $1,
-      description = $2,
-      price = $3,
-      category_id = $4,
+    SET
+      codigo_barras = $1,
+      nome_descricao = $2,
+      category_id = $3,
+      preco = $4,
       image_url = $5,
       active = $6,
-      featured = $7
-    WHERE id = $8
-  `, [name, description, price, category_id, image, active, featured, id]);
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = $7
+  `, [
+    codigo_barras,
+    nome_descricao,
+    category_id,
+    preco,
+    image,
+    active,
+    id
+  ]);
 
   await logAudit(req, 'editou produto', {
     id,
-    nome: name,
-    preco: price,
+    nome: nome_descricao,
+    preco,
     disponivel: active
   });
 
   res.json({ ok: true });
 });
 
+
+
+
 app.delete('/api/admin/products/:id', requireAuth, async (req, res) => {
   const db = await getDb();
 
   const id = Number(req.params.id);
-  const product = await db.get(`SELECT name FROM products WHERE id = $1`, [id]);
+  const product = await db.get(`
+    SELECT nome_descricao
+    FROM products
+    WHERE id = $1
+  `, [id]);
 
   await db.run(`DELETE FROM products WHERE id = $1`, [id]);
 
   await logAudit(req, 'excluiu produto', {
     id,
-    nome: product ? product.name : 'produto não encontrado'
+    nome: product ? product.nome_descricao : 'produto não encontrado'
   });
 
   res.json({ ok: true });
@@ -462,9 +787,9 @@ app.post('/api/orders', async (req, res) => {
       VALUES ($1, $2, $3, $4)
     `, [
       orderId,
-      item.name,
+      item.name || item.nome_descricao || '',
       Number(item.quantity || 0),
-      Number(item.price || 0)
+      Number(item.price || item.preco || 0)
     ]);
   }
 
@@ -642,6 +967,505 @@ app.put('/api/admin/settings', requireAuth, async (req, res) => {
   });
 
   res.json({ ok: true });
+});
+
+
+// ================= IMPORTAÇÃO XLSX PRODUTOS =================
+
+app.post('/api/admin/import-products', requireAuth, upload.single('file'), async (req, res) => {
+  try {
+    const db = await getDb();
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+    }
+
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      defval: '',
+      raw: true
+    });
+
+    let imported = 0;
+    let skipped = 0;
+    let categoriesCreated = 0;
+
+    for (const row of rows) {
+      const codigo_barras = String(
+        row.codigo_barras ||
+        row.CODIGO_BARRAS ||
+        row.Código ||
+        row.CODIGO ||
+        row.codigo ||
+        ''
+      ).trim();
+
+      const nome_descricao = String(
+        row.nome_descricao ||
+        row.NOME_DESCRICAO ||
+        row.Descrição ||
+        row.DESCRICAO ||
+        row.DESCRIÇÃO ||
+        row.Produto ||
+        row.PRODUTO ||
+        row.Nome ||
+        row.NOME ||
+        ''
+      ).trim();
+
+      const precoValue =
+        row.preco ??
+        row.PRECO ??
+        row.Preço ??
+        row.PREÇO ??
+        row.valor ??
+        row.VALOR ??
+        0;
+
+      let preco = 0;
+
+      if (typeof precoValue === 'number') {
+        preco = precoValue;
+      } else {
+        let txt = String(precoValue)
+          .replace('R$', '')
+          .replace(/\s/g, '')
+          .trim();
+
+        if (txt.includes(',') && txt.includes('.')) {
+          txt = txt.replace(/\./g, '').replace(',', '.');
+        } else if (txt.includes(',')) {
+          txt = txt.replace(',', '.');
+        }
+
+        preco = Number(txt);
+      }
+
+
+
+      const categoriaNome = String(
+        row.categoria ||
+        row.CATEGORIA ||
+        row.Categoria ||
+        'Geral'
+      ).trim() || 'Geral';
+
+      if (!nome_descricao || !preco || preco <= 0) {
+        skipped++;
+        continue;
+      }
+
+      let category = await db.get(`
+        SELECT id FROM categories
+        WHERE LOWER(name) = LOWER($1)
+      `, [categoriaNome]);
+
+      if (!category) {
+        category = await db.get(`
+          INSERT INTO categories (name, active, sort_order)
+          VALUES ($1, 1, 99)
+          RETURNING id
+        `, [categoriaNome]);
+
+        categoriesCreated++;
+      }
+
+      const exists = codigo_barras
+        ? await db.get(`
+            SELECT id FROM products
+            WHERE codigo_barras = $1
+          `, [codigo_barras])
+        : null;
+
+      if (exists) {
+        await db.run(`
+          UPDATE products
+          SET
+            nome_descricao = $1,
+            category_id = $2,
+            preco = $3,
+            active = 1,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $4
+        `, [
+          nome_descricao,
+          category.id,
+          preco,
+          exists.id
+        ]);
+      } else {
+        await db.run(`
+          INSERT INTO products (
+            codigo_barras,
+            nome_descricao,
+            category_id,
+            preco,
+            image_url,
+            active
+          )
+          VALUES ($1, $2, $3, $4, '', 1)
+        `, [
+          codigo_barras,
+          nome_descricao,
+          category.id,
+          preco
+        ]);
+      }
+
+      imported++;
+    }
+
+    await logAudit(req, 'importou produtos via XLSX', {
+      importados: imported,
+      ignorados: skipped,
+      categorias_criadas: categoriesCreated
+    });
+
+    res.json({
+      ok: true,
+      imported,
+      skipped,
+      categoriesCreated
+    });
+
+  } catch (err) {
+    console.error('Erro importação XLSX:', err);
+    res.status(500).json({ error: 'Erro ao importar planilha.' });
+  }
+});
+
+
+
+
+app.get('/count-products', async (req, res) => {
+
+  const db = await getDb();
+
+  const total = await db.get(`
+    SELECT COUNT(*) AS total
+    FROM products
+  `);
+
+  res.json(total);
+});
+
+
+
+// ================= BUSCAR IMAGENS POR CÓDIGO DE BARRAS =================
+
+app.post('/api/admin/fetch-product-images', requireAuth, async (req, res) => {
+  const db = await getDb();
+
+  const products = await db.all(`
+    SELECT id, codigo_barras, nome_descricao, image_url
+    FROM products
+    WHERE active = 1
+      AND codigo_barras IS NOT NULL
+      AND codigo_barras <> ''
+      AND (image_url IS NULL OR image_url = '')
+    LIMIT 50
+  `);
+
+  let updated = 0;
+  let notFound = 0;
+
+  for (const product of products) {
+    try {
+      const ean = String(product.codigo_barras || '').trim();
+
+      const response = await axios.get(
+        `https://world.openfoodfacts.org/api/v2/product/${ean}.json`,
+        { timeout: 8000 }
+      );
+
+      const data = response.data;
+
+      const imageUrl =
+        data?.product?.image_front_url ||
+        data?.product?.image_url ||
+        '';
+
+      if (!imageUrl) {
+        notFound++;
+        continue;
+      }
+
+      await db.run(`
+        UPDATE products
+        SET image_url = $1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [imageUrl, product.id]);
+
+      updated++;
+
+    } catch (err) {
+      notFound++;
+    }
+  }
+
+  await logAudit(req, 'buscou imagens automáticas', {
+    atualizados: updated,
+    nao_encontrados: notFound
+  });
+
+  res.json({
+    ok: true,
+    checked: products.length,
+    updated,
+    notFound
+  });
+});
+
+
+app.post('/api/admin/fetch-google-images', requireAuth, async (req, res) => {
+
+  const db = await getDb();
+
+  const products = await db.all(`
+    SELECT id, codigo_barras, nome_descricao, image_url
+    FROM products
+    WHERE active = 1
+      AND (image_url IS NULL OR image_url = '')
+    LIMIT 200
+  `);
+
+  let updated = 0;
+  let notFound = 0;
+
+  for (const product of products) {
+
+    try {
+
+      const tentativas = [
+        `${product.codigo_barras} ${product.nome_descricao}`,
+        `${product.codigo_barras}`,
+        `${product.nome_descricao}`
+      ];
+
+      let imageUrl = '';
+
+      for (const query of tentativas) {
+        console.log('Buscando:', query);
+
+        imageUrl = await searchGoogleImage(
+          query,
+          String(product.codigo_barras || '').trim()
+        );
+
+        if (imageUrl) {
+          console.log('✅ Encontrou com:', query);
+          break;
+        }
+      }
+          
+
+
+
+
+
+
+
+
+      
+
+      if (!imageUrl) {
+
+        console.log(
+          '❌ NÃO ENCONTROU:',
+          product.nome_descricao
+        );
+
+        notFound++;
+
+        continue;
+      }
+
+      console.log(
+        '✅ IMAGEM ENCONTRADA:',
+        product.nome_descricao
+      );
+
+      console.log(imageUrl);
+
+      console.log(
+        '⬇️ ENVIANDO PRO CLOUDINARY:',
+        product.nome_descricao
+      );
+
+      const cloudinaryUrl =
+        await uploadImageFromUrl(imageUrl);
+
+      console.log(
+        '☁️ CLOUDINARY URL:',
+        cloudinaryUrl
+      );
+
+      await db.run(`
+        UPDATE products
+        SET image_url = $1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [
+        cloudinaryUrl,
+        product.id
+      ]);
+
+      updated++;
+      console.log(
+        '💾 SALVA NO BANCO:',
+        product.nome_descricao
+      );
+
+      await new Promise(resolve =>
+        setTimeout(resolve, 3000)
+      );
+
+    } catch (err) {
+
+      console.log(
+        'Erro:',
+        product.nome_descricao
+      );
+
+      notFound++;
+    }
+  }
+
+  res.json({
+    ok: true,
+    updated,
+    notFound
+  });
+});
+
+
+
+
+// app.get('/clear-products', async (req, res) => {
+
+//   const db = await getDb();
+
+//   await db.run(`DELETE FROM products`);
+
+//   res.send('Produtos apagados.');
+// });
+
+
+
+
+app.get('/clear-images', async (req, res) => {
+
+  const db = await getDb();
+
+  await db.run(`
+    UPDATE products
+    SET image_url = ''
+  `);
+
+  res.send('Imagens removidas.');
+});
+
+
+app.put('/api/admin/products/:id/clear-image', requireAuth, async (req, res) => {
+  const db = await getDb();
+
+  const id = Number(req.params.id);
+
+  const product = await db.get(`
+    SELECT id, nome_descricao
+    FROM products
+    WHERE id = $1
+  `, [id]);
+
+  if (!product) {
+    return res.status(404).json({ error: 'Produto não encontrado.' });
+  }
+
+  await db.run(`
+    UPDATE products
+    SET image_url = '',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = $1
+  `, [id]);
+
+  await logAudit(req, 'removeu imagem do produto', {
+    id,
+    nome: product.nome_descricao
+  });
+
+  res.json({ ok: true });
+});
+
+
+
+
+app.delete('/api/admin/categories/:id', requireAuth, async (req, res) => {
+  const db = await getDb();
+
+  const id = Number(req.params.id);
+
+  const category = await db.get(`
+    SELECT id, name
+    FROM categories
+    WHERE id = $1
+  `, [id]);
+
+  if (!category) {
+    return res.status(404).json({
+      error: 'Categoria não encontrada.'
+    });
+  }
+
+  // Garante que exista a categoria "Geral"
+  let geral = await db.get(`
+    SELECT id
+    FROM categories
+    WHERE LOWER(name) = 'geral'
+  `);
+
+  if (!geral) {
+    geral = await db.get(`
+      INSERT INTO categories (name, active, sort_order)
+      VALUES ('Geral', 1, 99)
+      RETURNING id
+    `);
+  }
+
+  // Impede excluir a própria categoria Geral
+  if (id === geral.id) {
+    return res.status(400).json({
+      error: 'A categoria Geral não pode ser excluída.'
+    });
+  }
+
+  // Move os produtos para Geral
+  await db.run(`
+    UPDATE products
+    SET category_id = $1,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE category_id = $2
+  `, [geral.id, id]);
+
+  // Remove a categoria
+  await db.run(`
+    DELETE FROM categories
+    WHERE id = $1
+  `, [id]);
+
+  await logAudit(req, 'excluiu categoria', {
+    id,
+    categoria: category.name,
+    produtos_movidos_para: 'Geral'
+  });
+
+  res.json({
+    ok: true,
+    movedTo: 'Geral'
+  });
 });
 
 // ================= START =================
