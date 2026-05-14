@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PitStop Manaíra | Delivery Rápido</title>
+  <link rel="icon" href="/assets/logo.png" type="image/png">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <span>🔥 PitStop Manaíra</span>
+    <strong>Bebidas geladas • Lanches rápidos • Conveniência</strong>
+  </div>
+
+  <header class="header">
+    <a href="#" class="logo">
+      <img src="/assets/pitstop-logo.png" alt="PitStop Manaíra">
+    </a>
+
+    <nav>
+      <a href="#cardapio">Cardápio</a>
+      <a href="#especiais">Combos</a>
+      <a href="#beneficios">Como funciona</a>
+      <a href="/admin/login.html">Admin</a>
+    </nav>
+
+    <button class="cart-button" id="openCart">
+      Carrinho <strong id="cartCount">0</strong>
+    </button>
+  </header>
+
+  
+
+
+
+  <section class="hero hero-pitstop">
+    <div class="hero-content">
+      <span class="badge">🔥 PitStop Manaíra • Conveniência rápida</span>
+
+      <h1>Gelada, petisco e conveniência sem perder tempo.</h1>
+
+      <p>
+        Pediu, montou, enviou no WhatsApp. O PitStop Manaíra é para quem quer
+        bebida gelada, petisco e praticidade com a confiança de quem já é de casa.
+      </p>
+
+      <div class="hero-actions">
+        <a href="#cardapio" class="btn primary">Comprar agora</a>
+        <a href="#especiais" class="btn ghost">Ver combos</a>
+      </div>
+
+      <div class="pitstop-stats">
+        <div><strong>🍺</strong><span>Bebidas geladas</span></div>
+        <div><strong>🍔</strong><span>Lanches rápidos</span></div>
+        <div><strong>⚡</strong><span>Pedido ágil</span></div>
+      </div>
+    </div>
+
+    <div class="pitstop-board">
+      <div class="founder-mascot">
+        <img src="/assets/sr-dede.png" alt="Sr. Dedé - Fundador do Supermercado Manaíra">
+      </div>
+      <div class="board-header">
+        <strong>🔥 PitStop Manaíra</strong>
+        <span>Você já é de casa</span>
+      </div>
+
+      <div class="combo-card">
+        <span class="combo-label">Combo da hora</span>
+        <h2>Gelada + Lanche + Conveniência</h2>
+        <p>Monte seu pedido em poucos cliques e envie direto pelo WhatsApp.</p>
+
+        <div class="combo-items">
+          <div>🍺<span>Bebida</span></div>
+          <div>🍔<span>Lanche</span></div>
+          <div>🧊<span>Gelo</span></div>
+        </div>
+      </div>
+
+      <div class="board-footer">
+        <strong>🔥 PitStop Manaíra</strong>
+        <span>rápido • prático • gelado</span>
+      </div>
+    </div>
+  </section>
+
+
+
+
+  <section class="quick-categories">
+    <a href="#cardapio">🍺 Bebidas</a>
+    <a href="#cardapio">🥤 Refrigerantes</a>
+    <a href="#cardapio">🍔 Lanches</a>
+    <a href="#cardapio">🔥 Combos</a>
+  </section>
+
+  <section class="promo-strip" id="especiais">
+    <div>
+      <span>PitStop Manaíra</span>
+      <h2>Seu pedido rápido, organizado e direto no WhatsApp.</h2>
+      <p>
+        Ideal para bebidas geladas, lanches rápidos, combos e produtos de conveniência.
+      </p>
+    </div>
+    <a href="#cardapio" class="btn dark">Fazer pedido</a>
+  </section>
+
+  <main class="container" id="cardapio">
+    <div class="section-title">
+      <span>Cardápio online</span>
+      <h2>Escolha seu pedido</h2>
+      <p>Use as categorias para encontrar bebidas, lanches e combos disponíveis.</p>
+    </div>
+
+    <div class="filters" id="filters"></div>
+    <div class="client-search">
+      <input
+        type="search"
+        id="productSearch"
+        placeholder="Buscar produto pelo nome..."
+      >
+    </div>
+
+
+
+    <div class="products" id="products"></div>
+  </main>
+
+  <section class="benefits" id="beneficios">
+    <div class="benefit">
+      📲 <strong>Pedido pelo WhatsApp</strong>
+      <span>Você monta o carrinho e envia tudo organizado.</span>
+    </div>
+
+    <div class="benefit">
+      🍺 <strong>Bebida gelada</strong>
+      <span>Produtos prontos para consumo rápido.</span>
+    </div>
+
+    <div class="benefit">
+      🛒 <strong>Confiança Manaíra</strong>
+      <span>Atendimento com a marca que você já conhece.</span>
+    </div>
+  </section>
+
+  <footer>
+    <strong>PitStop Manaíra</strong>
+    <p>Supermercado Manaíra — Você já é de casa.</p>
+  </footer>
+
+  <aside class="cart" id="cart">
+    <div class="cart-panel">
+      <div class="cart-header">
+        <h2>Seu carrinho</h2>
+        <button id="closeCart">×</button>
+      </div>
+
+      <div class="cart-items" id="cartItems"></div>
+      <div class="cart-total">Total: <strong id="cartTotal">R$ 0,00</strong></div>
+
+      <form class="checkout" id="checkoutForm">
+        <input type="text" id="customerName" placeholder="Seu nome" required>
+        <input type="text" id="customerAddress" placeholder="Endereço ou retirada no PitStop" required>
+
+        <select id="paymentMethod" required>
+          <option value="">Forma de pagamento</option>
+          <option>Pix</option>
+          <option>Dinheiro</option>
+          <option>Cartão</option>
+        </select>
+
+        <textarea id="orderNote" placeholder="Observação do pedido"></textarea>
+
+        <button type="submit" class="btn primary full">
+          Enviar pedido no WhatsApp
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <script src="app.js"></script>
+  <script>
+    const openCartHero = document.getElementById('openCartHero');
+    const openCartButton = document.getElementById('openCart');
+
+    if (openCartHero && openCartButton) {
+      openCartHero.addEventListener('click', () => openCartButton.click());
+    }
+  </script>
+</body>
+</html>

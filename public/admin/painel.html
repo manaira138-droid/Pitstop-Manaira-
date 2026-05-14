@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/assets/logo.png" type="image/png">
+  <title>PitStop Manaíra | Painel Admin</title>
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+
+  <header class="admin-header">
+    <div>
+      <strong>🔥 PitStop Manaíra Admin</strong>
+      <span>Controle de produtos, pedidos e operação</span>
+    </div>
+
+    <nav>
+      <a href="/" target="_blank">Ver loja</a>
+      <button id="logoutBtn">Sair</button>
+    </nav>
+  </header>
+
+  <main class="admin-layout">
+
+    <section class="panel form-panel">
+
+      <h1 id="formTitle">Novo produto</h1>
+
+      <form id="productForm">
+
+        <input type="hidden" id="productId">
+
+        <label>Código de barras</label>
+        <input
+          type="text"
+          id="codigo_barras"
+          placeholder="Ex: 7894900011517"
+        >
+
+        <label>Nome do produto</label>
+        <input
+          type="text"
+          id="nome_descricao"
+          required
+          placeholder="Ex: Coca-Cola 2L"
+        >
+
+        <div class="row">
+
+          <div>
+            <label>Preço</label>
+            <input
+              type="number"
+              id="preco"
+              step="0.01"
+              min="0"
+              required
+              placeholder="12.90"
+            >
+          </div>
+
+          <div>
+            <label>Categoria</label>
+            <select id="category" required></select>
+          </div>
+          <button
+          type="button"
+          id="deleteCategoryBtn"
+          class="danger-btn"
+        >
+          Excluir categoria
+        </button>
+
+        </div>
+
+        <label>Imagem do produto</label>
+        <button type="button" id="btnClearImage" class="danger-btn">
+          Remover foto
+        </button>
+
+        <input
+          type="file"
+          id="image"
+          accept="image/png,image/jpeg,image/webp"
+        >
+
+        <div class="checks">
+          <label>
+            <input type="checkbox" id="active" checked>
+            Produto disponível
+          </label>
+        </div>
+
+        <button type="submit" class="primary">
+          Salvar produto
+        </button>
+
+        <button type="button" class="secondary" id="clearBtn">
+          Limpar formulário
+        </button>
+
+        <span id="formMsg"></span>
+
+      </form>
+
+      <hr>
+
+      <h2>📦 Importar produtos via Excel</h2>
+
+      <form id="importForm" class="settings-form">
+
+        <label>Arquivo .xlsx</label>
+
+        <input
+          type="file"
+          id="importFile"
+          accept=".xlsx"
+          required
+        >
+
+        <small>
+          Colunas esperadas:
+          codigo_barras |
+          nome_descricao |
+          preco |
+          categoria
+        </small>
+
+        <button type="submit">
+          Importar produtos
+        </button>
+
+        <span id="importMsg"></span>
+
+      </form>
+
+
+      <hr>
+
+      <h2>🖼 Buscar imagens Google</h2>
+
+      <div class="settings-form">
+
+        <small>
+          O sistema irá pesquisar imagens automaticamente
+          no Google Images usando o nome do produto.
+        </small>
+
+        <button
+          type="button"
+          id="fetchGoogleImagesBtn"
+        >
+          Buscar imagens Google
+        </button>
+
+        <span id="fetchImagesMsg"></span>
+
+      </div>
+
+
+
+      <hr>
+
+      <h2>Nova categoria</h2>
+
+      <div class="inline-form">
+
+        <input
+          type="text"
+          id="newCategory"
+          placeholder="Ex: Bebidas"
+        >
+
+        <button id="addCategoryBtn">
+          Adicionar
+        </button>
+
+        
+
+      </div>
+
+      <hr>
+
+      <section class="settings-box">
+
+        <h2>Configurações da loja</h2>
+
+        <form id="settingsForm" class="settings-form">
+
+          <label>
+            WhatsApp para receber pedidos
+          </label>
+
+          <input
+            type="text"
+            id="settingWhatsapp"
+            placeholder="Ex: 5583988061752"
+            required
+          >
+
+          <label class="check-line">
+
+            <input
+              type="checkbox"
+              id="settingIsOpen"
+            >
+
+            Loja aberta para pedidos
+
+          </label>
+
+          <button type="submit">
+            Salvar configurações
+          </button>
+
+        </form>
+
+      </section>
+
+      <hr>
+
+      <h2>Conta admin</h2>
+
+      <form id="accountForm" class="account-form">
+
+        <label>Usuário</label>
+
+        <input
+          type="text"
+          id="accountUsername"
+          required
+          placeholder="Novo usuário"
+        >
+
+        <label>Senha atual</label>
+
+        <input
+          type="password"
+          id="currentPassword"
+          required
+          placeholder="Digite a senha atual"
+        >
+
+        <label>Nova senha</label>
+
+        <input
+          type="password"
+          id="newPassword"
+          required
+          minlength="6"
+          placeholder="Mínimo 6 caracteres"
+        >
+
+        <label>Confirmar nova senha</label>
+
+        <input
+          type="password"
+          id="confirmPassword"
+          required
+          minlength="6"
+          placeholder="Repita a nova senha"
+        >
+
+        <button type="submit" class="primary">
+          Atualizar acesso
+        </button>
+
+        <small>
+          Após alterar, você será desconectado
+          para entrar novamente.
+        </small>
+
+        <span id="accountMsg"></span>
+
+      </form>
+
+    </section>
+
+    <section class="panel list-panel">
+
+      <div class="list-title">
+
+        <h1>Produtos cadastrados</h1>
+
+        <input
+          type="search"
+          id="search"
+          placeholder="Buscar produto..."
+        >
+
+      </div>
+
+      <div class="table-wrap">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Categoria</th>
+              <th>Preço</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+
+          <tbody id="productsTable"></tbody>
+
+        </table>
+
+      </div>
+
+      <section class="panel orders-panel">
+
+        <div class="list-title">
+
+          <div>
+            <h1>Pedidos recebidos</h1>
+            <p>
+              Acompanhe os pedidos enviados pelo site.
+            </p>
+          </div>
+
+          <button
+            id="refreshOrdersBtn"
+            class="secondary"
+          >
+            Atualizar pedidos
+          </button>
+
+        </div>
+
+        <div
+          id="ordersList"
+          class="orders-list"
+        ></div>
+
+      </section>
+
+      <div class="audit-area">
+
+        <div class="metric-grid">
+
+          <div class="metric-card">
+            <span>Acessos registrados</span>
+            <strong id="accessTotal">0</strong>
+          </div>
+
+          <div class="metric-card">
+            <span>Acessos hoje</span>
+            <strong id="accessToday">0</strong>
+          </div>
+
+          <div class="metric-card">
+            <span>Visitantes únicos</span>
+            <strong id="accessUnique">0</strong>
+          </div>
+
+        </div>
+
+        <div class="audit-grid">
+
+          <section class="audit-box">
+
+            <div class="audit-title">
+              <h2>Auditoria de modificações</h2>
+              <button id="refreshAuditBtn">
+                Atualizar
+              </button>
+            </div>
+
+            <div
+              id="auditList"
+              class="log-list"
+            ></div>
+
+          </section>
+
+          <section class="audit-box">
+
+            <div class="audit-title">
+              <h2>Acessos ao site</h2>
+              <button id="refreshAccessBtn">
+                Atualizar
+              </button>
+            </div>
+
+            <div
+              id="accessList"
+              class="log-list"
+            ></div>
+
+          </section>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="painel.js"></script>
+
+</body>
+</html>
