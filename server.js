@@ -852,6 +852,131 @@ app.put('/api/admin/orders/:id/status', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+
+
+// ================= RELATÓRIOS ADMIN =================
+
+app.get('/api/admin/reports/sales', requireAuth, async (req, res) => {
+  try {
+    const db = await getDb();
+
+    const { start, end } = req.query;
+
+    let params = [];
+    let where = 'WHERE 1=1';
+
+    if (start) {
+      params.push(`${start} 00:00:00`);
+      where += ` AND created_at >= $${params.length}`;
+    }
+
+    if (end) {
+      params.push(`${end} 23:59:59`);
+      where += ` AND created_at <= $${params.length}`;
+    }
+
+    const resumo = await db.get(`
+      SELECT
+        COALESCE(SUM(CASE WHEN status != 'cancelado' THEN total ELSE 0 END), 0) AS total_vendido,
+        COUNT(*) AS total_pedidos,
+        COUNT(DISTINCT NULLIF(customer_phone, '')) AS clientes_unicos,
+        COALESCE(
+          AVG(CASE WHEN status != 'cancelado' THEN total END),
+          0
+        ) AS ticket_medio
+      FROM orders
+      ${where}
+    `, params);
+
+    const modalidadesRows = await db.all(`
+      SELECT
+        CASE
+          WHEN address IS NULL OR TRIM(address) = '' THEN 'retirada'
+          ELSE 'delivery'
+        END AS modalidade,
+        COUNT(*) AS total
+      FROM orders
+      ${where}
+      GROUP BY modalidade
+    `, params);
+
+    const statusRows = await db.all(`
+      SELECT status, COUNT(*) AS total
+      FROM orders
+      ${where}
+      GROUP BY status
+    `, params);
+
+    const produtosMaisVendidos = await db.all(`
+      SELECT
+        oi.product_name AS nome,
+        COALESCE(SUM(oi.quantity), 0) AS quantidade,
+        COALESCE(SUM(oi.quantity * oi.price), 0) AS total
+      FROM order_items oi
+      INNER JOIN orders o ON o.id = oi.order_id
+      ${where.replaceAll('created_at', 'o.created_at')}
+        AND o.status != 'cancelado'
+      GROUP BY oi.product_name
+      ORDER BY quantidade DESC
+      LIMIT 15
+    `, params);
+
+    const modalidades = {
+      delivery: 0,
+      retirada: 0
+    };
+
+    modalidadesRows.forEach(row => {
+      modalidades[row.modalidade] = Number(row.total || 0);
+    });
+
+    const status = {
+      pendentes: 0,
+      concluidos: 0,
+      cancelados: 0
+    };
+
+    statusRows.forEach(row => {
+      if (row.status === 'novo' || row.status === 'producao') {
+        status.pendentes += Number(row.total || 0);
+      }
+
+      if (row.status === 'finalizado') {
+        status.concluidos += Number(row.total || 0);
+      }
+
+      if (row.status === 'cancelado') {
+        status.cancelados += Number(row.total || 0);
+      }
+    });
+
+    res.json({
+      resumo: {
+        totalVendido: Number(resumo.total_vendido || 0),
+        totalPedidos: Number(resumo.total_pedidos || 0),
+        ticketMedio: Number(resumo.ticket_medio || 0),
+        clientesUnicos: Number(resumo.clientes_unicos || 0)
+      },
+      modalidades,
+      status,
+      produtosMaisVendidos: produtosMaisVendidos.map(item => ({
+        nome: item.nome,
+        quantidade: Number(item.quantidade || 0),
+        total: Number(item.total || 0)
+      }))
+    });
+
+  } catch (error) {
+    console.error('Erro ao gerar relatório:', error);
+    res.status(500).json({
+      error: 'Erro ao gerar relatório de vendas.'
+    });
+  }
+});
+
+
+
+
 // ================= AUDITORIA =================
 
 app.get('/api/admin/audit', requireAuth, async (req, res) => {
@@ -1474,4 +1599,8 @@ app.listen(PORT, () => {
   console.log(`Rodando em http://localhost:${PORT}`);
   console.log(`Loja: http://localhost:${PORT}`);
   console.log(`Painel admin: http://localhost:${PORT}/admin/login.html`);
+});
+
+app.get('/admin/relatorios', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin', 'admin-relatorios.html'));
 });

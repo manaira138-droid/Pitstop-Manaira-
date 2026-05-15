@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relatórios | PitStop Manaíra</title>
+  <link rel="stylesheet" href="./admin.css" />
+</head>
+<body>
+  <main class="reports-page">
+    <section class="reports-header">
+      <div>
+        <span class="reports-kicker">Painel Administrativo</span>
+        <h1>Relatórios de Vendas</h1>
+        <p>Acompanhe o desempenho dos pedidos, produtos e modalidades de entrega.</p>
+      </div>
+
+      <div class="reports-header-actions">
+        <a href="./painel.html" class="btn-secondary">Voltar ao painel</a>
+      </div>
+    </section>
+
+    <section class="report-filters">
+      <div class="filter-group">
+        <label for="dataInicio">Data inicial</label>
+        <input type="date" id="dataInicio" />
+      </div>
+
+      <div class="filter-group">
+        <label for="dataFim">Data final</label>
+        <input type="date" id="dataFim" />
+      </div>
+
+      <button id="btnBuscarRelatorio" class="btn-primary">
+        Buscar relatório
+      </button>
+    </section>
+
+    <section class="report-cards">
+      <article class="report-card">
+        <span>Total vendido</span>
+        <strong id="totalVendido">R$ 0,00</strong>
+        <small>Faturamento no período</small>
+      </article>
+
+      <article class="report-card">
+        <span>Pedidos</span>
+        <strong id="totalPedidos">0</strong>
+        <small>Quantidade de pedidos</small>
+      </article>
+
+      <article class="report-card">
+        <span>Ticket médio</span>
+        <strong id="ticketMedio">R$ 0,00</strong>
+        <small>Média por pedido</small>
+      </article>
+
+      <article class="report-card">
+        <span>Clientes únicos</span>
+        <strong id="clientesUnicos">0</strong>
+        <small>Clientes diferentes no período</small>
+      </article>
+    </section>
+
+    <section class="report-grid">
+      <article class="report-box">
+        <div class="box-header">
+          <div>
+            <h2>Produtos mais vendidos</h2>
+            <p>Ranking por quantidade vendida</p>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Qtd.</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaProdutosVendidos">
+              <tr>
+                <td colspan="3">Nenhum dado carregado.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="report-box">
+        <div class="box-header">
+          <div>
+            <h2>Modalidade dos pedidos</h2>
+            <p>Delivery x retirada</p>
+          </div>
+        </div>
+
+        <div class="status-list">
+          <div class="status-row">
+            <span>Delivery</span>
+            <strong id="totalDelivery">0</strong>
+          </div>
+
+          <div class="status-row">
+            <span>Retirada</span>
+            <strong id="totalRetirada">0</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="report-box">
+        <div class="box-header">
+          <div>
+            <h2>Status dos pedidos</h2>
+            <p>Situação geral no período</p>
+          </div>
+        </div>
+
+        <div class="status-list">
+          <div class="status-row">
+            <span>Pendentes</span>
+            <strong id="statusPendentes">0</strong>
+          </div>
+
+          <div class="status-row">
+            <span>Concluídos</span>
+            <strong id="statusConcluidos">0</strong>
+          </div>
+
+          <div class="status-row">
+            <span>Cancelados</span>
+            <strong id="statusCancelados">0</strong>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="./admin-relatorios.js"></script>
+</body>
+</html>
