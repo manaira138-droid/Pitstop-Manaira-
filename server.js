@@ -462,7 +462,7 @@ app.get('/api/products', async (req, res) => {
     FROM products p
     LEFT JOIN categories c ON c.id = p.category_id
     WHERE p.active = 1
-    ORDER BY p.id DESC
+    ORDER BY c.name ASC, p.nome_descricao ASC
   `);
 
   res.json(rows);
@@ -567,7 +567,7 @@ app.get('/api/admin/products', requireAuth, async (req, res) => {
       c.name AS category_name
     FROM products p
     LEFT JOIN categories c ON c.id = p.category_id
-    ORDER BY p.id DESC
+    ORDER BY c.name ASC, p.nome_descricao ASC
   `);
 
   res.json(rows);
