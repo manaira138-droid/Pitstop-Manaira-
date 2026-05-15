@@ -14,7 +14,7 @@
 
 
 .table-wrap {
-  max-height: 650px;
+  max-height: 800px;
   overflow: auto;
   border: 1px solid #f0e8e1;
   border-radius: 16px;
@@ -547,5 +547,36 @@ table{width:100%;border-collapse:collapse;min-width:760px}th,td{text-align:left;
 
   .report-card strong {
     font-size: 30px;
+  }
+}
+
+/* Botão exclusivo da tela de relatórios */
+.reports-header-actions .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffd600;
+  color: #061f54;
+  text-decoration: none;
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 20px;
+  font-weight: 900;
+  font-size: 14px;
+  white-space: nowrap;
+  box-shadow: 0 12px 26px rgba(255, 214, 0, 0.22);
+  transition: all 0.2s ease;
+}
+
+.reports-header-actions .btn-secondary:hover {
+  background: #ffbf00;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px rgba(255, 214, 0, 0.28);
+}
+
+@media (max-width: 760px) {
+  .reports-header-actions .btn-secondary {
+    width: 100%;
+    text-align: center;
   }
 }

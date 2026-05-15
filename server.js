@@ -950,6 +950,28 @@ app.get('/api/admin/reports/sales', requireAuth, async (req, res) => {
       }
     });
 
+
+
+    const vendasPorDia = await db.all(`
+      SELECT
+        DATE(created_at) AS dia,
+        COALESCE(SUM(CASE WHEN status != 'cancelado' THEN total ELSE 0 END), 0) AS total
+      FROM orders
+      ${where}
+      GROUP BY DATE(created_at)
+      ORDER BY dia ASC
+    `, params);
+
+    const vendasPorMes = await db.all(`
+      SELECT
+        TO_CHAR(created_at, 'YYYY-MM') AS mes,
+        COALESCE(SUM(CASE WHEN status != 'cancelado' THEN total ELSE 0 END), 0) AS total
+      FROM orders
+      ${where}
+      GROUP BY TO_CHAR(created_at, 'YYYY-MM')
+      ORDER BY mes ASC
+    `, params);
+
     res.json({
       resumo: {
         totalVendido: Number(resumo.total_vendido || 0),
@@ -957,14 +979,37 @@ app.get('/api/admin/reports/sales', requireAuth, async (req, res) => {
         ticketMedio: Number(resumo.ticket_medio || 0),
         clientesUnicos: Number(resumo.clientes_unicos || 0)
       },
+
       modalidades,
+
       status,
+
       produtosMaisVendidos: produtosMaisVendidos.map(item => ({
         nome: item.nome,
         quantidade: Number(item.quantidade || 0),
         total: Number(item.total || 0)
+      })),
+
+      vendasPorDia: vendasPorDia.map(item => ({
+        dia: item.dia,
+        total: Number(item.total || 0)
+      })),
+
+      vendasPorMes: vendasPorMes.map(item => ({
+        mes: item.mes,
+        total: Number(item.total || 0)
       }))
     });
+
+
+
+
+
+
+
+
+
+
 
   } catch (error) {
     console.error('Erro ao gerar relatório:', error);
@@ -1032,6 +1077,7 @@ app.get('/api/admin/access-logs', requireAuth, async (req, res) => {
     return date === today;
   }).length;
 
+
   res.json({
     total: logs.length,
     today: todayCount,
@@ -1045,6 +1091,8 @@ app.get('/api/admin/access-logs', requireAuth, async (req, res) => {
       created_at: log.created_at
     }))
   });
+
+
 });
 
 // ================= CONFIGURAÇÕES DA LOJA ADMIN =================
@@ -1592,6 +1640,78 @@ app.delete('/api/admin/categories/:id', requireAuth, async (req, res) => {
     movedTo: 'Geral'
   });
 });
+
+
+
+// ================= DETALHAMENTO DE VENDAS ADMIN =================
+
+app.get('/api/admin/reports/sales-detail', requireAuth, async (req, res) => {
+  try {
+    const db = await getDb();
+
+    const type = String(req.query.type || 'day');
+    const date = String(req.query.date || '');
+    const month = String(req.query.month || '');
+
+    let where = `WHERE o.status != 'cancelado'`;
+    let params = [];
+
+    if (type === 'day') {
+      if (!date) {
+        return res.status(400).json({ error: 'Informe a data.' });
+      }
+
+      params.push(`${date} 00:00:00`);
+      params.push(`${date} 23:59:59`);
+
+      where += ` AND o.created_at >= $1 AND o.created_at <= $2`;
+    }
+
+    if (type === 'month') {
+      if (!month) {
+        return res.status(400).json({ error: 'Informe o mês.' });
+      }
+
+      params.push(`${month}-01`);
+
+      where += `
+        AND DATE_TRUNC('month', o.created_at) = DATE_TRUNC('month', $1::date)
+      `;
+    }
+
+    const rows = await db.all(`
+      SELECT
+        oi.product_name AS nome,
+        COALESCE(SUM(oi.quantity), 0) AS quantidade,
+        COALESCE(SUM(oi.quantity * oi.price), 0) AS total
+      FROM order_items oi
+      INNER JOIN orders o ON o.id = oi.order_id
+      ${where}
+      GROUP BY oi.product_name
+      ORDER BY quantidade DESC, total DESC
+    `, params);
+
+    res.json({
+      type,
+      date,
+      month,
+      itens: rows.map(item => ({
+        nome: item.nome,
+        quantidade: Number(item.quantidade || 0),
+        total: Number(item.total || 0)
+      }))
+    });
+
+  } catch (error) {
+    console.error('Erro ao gerar detalhamento de vendas:', error);
+    res.status(500).json({
+      error: 'Erro ao gerar detalhamento de vendas.'
+    });
+  }
+});
+
+
+
 
 // ================= START =================
 

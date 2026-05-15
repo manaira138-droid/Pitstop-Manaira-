@@ -135,6 +135,57 @@
           </div>
         </div>
       </article>
+      
+        <article class="report-box sales-detail-box">
+            <div class="box-header">
+                <div>
+                <h2>Detalhamento de vendas</h2>
+                <p>Veja os produtos vendidos por dia ou por mês</p>
+                </div>
+            </div>
+
+            <div class="detail-filters">
+                <div class="filter-group">
+                <label for="tipoDetalhamento">Tipo</label>
+                <select id="tipoDetalhamento">
+                    <option value="day">Diário</option>
+                    <option value="month">Mensal</option>
+                </select>
+                </div>
+
+                <div class="filter-group" id="campoDetalheDia">
+                <label for="dataDetalhamento">Data</label>
+                <input type="date" id="dataDetalhamento" />
+                </div>
+
+                <div class="filter-group" id="campoDetalheMes" style="display: none;">
+                <label for="mesDetalhamento">Mês</label>
+                <input type="month" id="mesDetalhamento" />
+                </div>
+
+                <button id="btnBuscarDetalhamento" class="btn-primary">
+                Buscar detalhamento
+                </button>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                <thead>
+                    <tr>
+                    <th>Produto</th>
+                    <th>Qtd.</th>
+                    <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaDetalhamentoVendas">
+                    <tr>
+                    <td colspan="3">Nenhum detalhamento carregado.</td>
+                    </tr>
+                </tbody>
+                </table>
+            </div>
+        </article>
+        
     </section>
   </main>
 

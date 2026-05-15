@@ -16,6 +16,14 @@ const statusCancelados = document.getElementById('statusCancelados');
 
 const tabelaProdutosVendidos = document.getElementById('tabelaProdutosVendidos');
 
+const tipoDetalhamento = document.getElementById('tipoDetalhamento');
+const campoDetalheDia = document.getElementById('campoDetalheDia');
+const campoDetalheMes = document.getElementById('campoDetalheMes');
+const dataDetalhamento = document.getElementById('dataDetalhamento');
+const mesDetalhamento = document.getElementById('mesDetalhamento');
+const btnBuscarDetalhamento = document.getElementById('btnBuscarDetalhamento');
+const tabelaDetalhamentoVendas = document.getElementById('tabelaDetalhamentoVendas');
+
 function formatMoney(value) {
   return Number(value || 0).toLocaleString('pt-BR', {
     style: 'currency',
@@ -31,6 +39,10 @@ function getHoje() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getMesAtual() {
+  return new Date().toISOString().slice(0, 7);
+}
+
 function getPrimeiroDiaMes() {
   const hoje = new Date();
   return new Date(hoje.getFullYear(), hoje.getMonth(), 1)
@@ -44,7 +56,6 @@ async function carregarRelatorio() {
     const end = dataFim.value;
 
     let url = '/api/admin/reports/sales';
-
     const params = new URLSearchParams();
 
     if (start) params.append('start', start);
@@ -76,6 +87,57 @@ async function carregarRelatorio() {
   } finally {
     btnBuscarRelatorio.disabled = false;
     btnBuscarRelatorio.textContent = 'Buscar relatório';
+  }
+}
+
+async function carregarDetalhamento() {
+  try {
+    const type = tipoDetalhamento.value;
+
+    let url = '/api/admin/reports/sales-detail';
+    const params = new URLSearchParams();
+
+    params.append('type', type);
+
+    if (type === 'day') {
+      if (!dataDetalhamento.value) {
+        alert('Informe a data.');
+        return;
+      }
+
+      params.append('date', dataDetalhamento.value);
+    }
+
+    if (type === 'month') {
+      if (!mesDetalhamento.value) {
+        alert('Informe o mês.');
+        return;
+      }
+
+      params.append('month', mesDetalhamento.value);
+    }
+
+    url += `?${params.toString()}`;
+
+    btnBuscarDetalhamento.disabled = true;
+    btnBuscarDetalhamento.textContent = 'Carregando...';
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error('Erro ao buscar detalhamento.');
+    }
+
+    const data = await response.json();
+
+    preencherDetalhamento(data.itens);
+
+  } catch (error) {
+    console.error(error);
+    alert('Não foi possível carregar o detalhamento.');
+  } finally {
+    btnBuscarDetalhamento.disabled = false;
+    btnBuscarDetalhamento.textContent = 'Buscar detalhamento';
   }
 }
 
@@ -122,11 +184,56 @@ function preencherProdutos(produtos) {
   });
 }
 
+function preencherDetalhamento(itens) {
+  tabelaDetalhamentoVendas.innerHTML = '';
+
+  if (!itens || itens.length === 0) {
+    tabelaDetalhamentoVendas.innerHTML = `
+      <tr>
+        <td colspan="3">Nenhuma venda encontrada para esse filtro.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  itens.forEach((item) => {
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+      <td>${item.nome}</td>
+      <td>${formatNumber(item.quantidade)}</td>
+      <td>${formatMoney(item.total)}</td>
+    `;
+
+    tabelaDetalhamentoVendas.appendChild(tr);
+  });
+}
+
+function alternarTipoDetalhamento() {
+  const type = tipoDetalhamento.value;
+
+  if (type === 'day') {
+    campoDetalheDia.style.display = 'flex';
+    campoDetalheMes.style.display = 'none';
+  } else {
+    campoDetalheDia.style.display = 'none';
+    campoDetalheMes.style.display = 'flex';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   dataInicio.value = getPrimeiroDiaMes();
   dataFim.value = getHoje();
 
+  dataDetalhamento.value = getHoje();
+  mesDetalhamento.value = getMesAtual();
+
+  alternarTipoDetalhamento();
+
   carregarRelatorio();
+  carregarDetalhamento();
 });
 
 btnBuscarRelatorio.addEventListener('click', carregarRelatorio);
+btnBuscarDetalhamento.addEventListener('click', carregarDetalhamento);
+tipoDetalhamento.addEventListener('change', alternarTipoDetalhamento);
