@@ -24,9 +24,25 @@
       <a href="#beneficios">Como funciona</a>
     </nav>
 
-    <button class="cart-button" id="openCart">
-      Carrinho <strong id="cartCount">0</strong>
-    </button>
+    <div class="header-actions">
+      
+      <a
+        href="/login.html"
+        class="client-account-btn"
+        id="clientAccountBtn"
+        style="visibility: hidden;"
+      >
+        Minha Conta
+      </a>
+
+
+
+
+
+      <button class="cart-button" id="openCart">
+        Carrinho <strong id="cartCount">0</strong>
+      </button>
+    </div>
   </header>
 
   
@@ -186,6 +202,43 @@
     if (openCartHero && openCartButton) {
       openCartHero.addEventListener('click', () => openCartButton.click());
     }
+    
+
+
+    async function verificarClienteLogado() {
+      const btn = document.getElementById('clientAccountBtn');
+
+      if (!btn) return;
+
+      try {
+        const response = await fetch('/api/customer/me');
+
+        if (!response.ok) {
+          btn.textContent = 'Entrar';
+          btn.href = '/login.html';
+        } else {
+          btn.textContent = 'Minha Conta';
+          btn.href = '/minha-conta.html';
+        }
+
+      } catch (error) {
+        btn.textContent = 'Entrar';
+        btn.href = '/cliente-teste.html';
+      } finally {
+        btn.style.visibility = 'visible';
+      }
+    }
+
+    
+
+    verificarClienteLogado();
+
+
+
+
+
+
+
   </script>
 </body>
 </html>

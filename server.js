@@ -338,6 +338,11 @@ function requireAuth(req, res, next) {
   return res.status(401).json({ error: 'Não autorizado' });
 }
 
+function requireCustomerAuth(req, res, next) {
+  if (req.session && req.session.customerId) return next();
+  return res.status(401).json({ error: 'Cliente não autenticado' });
+}
+
 function clientIp(req) {
   return String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '')
     .split(',')[0]
@@ -427,6 +432,253 @@ app.get('/api/config', async (req, res) => {
     isOpen: Number(settings?.is_open ?? 1)
   });
 });
+
+// ================= CLIENTES AUTH =================
+
+app.post('/api/customer/register', async (req, res) => {
+  try {
+    const db = await getDb();
+
+    const name = String(req.body.name || '').trim();
+    const phone = String(req.body.phone || '').replace(/\D/g, '');
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+
+    if (!name || name.length < 3) {
+      return res.status(400).json({
+        error: 'Informe seu nome completo.'
+      });
+    }
+
+    if (!phone || phone.length < 10) {
+      return res.status(400).json({
+        error: 'Informe um telefone válido.'
+      });
+    }
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        error: 'A senha deve ter pelo menos 6 caracteres.'
+      });
+    }
+
+    const exists = await db.get(`
+      SELECT id
+      FROM customers
+      WHERE phone = $1
+         OR LOWER(email) = LOWER($2)
+    `, [
+      phone,
+      email || null
+    ]);
+
+    if (exists) {
+      return res.status(400).json({
+        error: 'Já existe uma conta com este telefone ou e-mail.'
+      });
+    }
+
+    const customer = await db.get(`
+      INSERT INTO customers (
+        name,
+        phone,
+        email,
+        password_hash,
+        is_active
+      )
+      VALUES ($1, $2, $3, $4, TRUE)
+      RETURNING id, name, phone, email
+    `, [
+      name,
+      phone,
+      email || null,
+      bcrypt.hashSync(password, 10)
+    ]);
+
+    req.session.customerId = customer.id;
+
+    res.json({
+      ok: true,
+      customer
+    });
+
+  } catch (error) {
+    console.error('Erro ao cadastrar cliente:', error);
+
+    res.status(500).json({
+      error: 'Erro ao cadastrar cliente.'
+    });
+  }
+});
+
+app.post('/api/customer/login', async (req, res) => {
+  try {
+    const db = await getDb();
+
+    const login = String(req.body.login || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+
+    if (!login || !password) {
+      return res.status(400).json({
+        error: 'Informe login e senha.'
+      });
+    }
+
+    const cleanPhone = login.replace(/\D/g, '');
+
+    const customer = await db.get(`
+      SELECT *
+      FROM customers
+      WHERE LOWER(email) = LOWER($1)
+         OR phone = $2
+      LIMIT 1
+    `, [
+      login,
+      cleanPhone
+    ]);
+
+    if (!customer) {
+      return res.status(401).json({
+        error: 'Login ou senha inválidos.'
+      });
+    }
+
+    const passwordOk = bcrypt.compareSync(
+      password,
+      customer.password_hash
+    );
+
+    if (!passwordOk) {
+      return res.status(401).json({
+        error: 'Login ou senha inválidos.'
+      });
+    }
+
+    if (!customer.is_active) {
+      return res.status(403).json({
+        error: 'Conta desativada.'
+      });
+    }
+
+    req.session.customerId = customer.id;
+
+    res.json({
+      ok: true,
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        phone: customer.phone,
+        email: customer.email
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro login cliente:', error);
+
+    res.status(500).json({
+      error: 'Erro ao fazer login.'
+    });
+  }
+});
+
+app.post('/api/customer/logout', requireCustomerAuth, async (req, res) => {
+  req.session.customerId = null;
+
+  res.json({
+    ok: true
+  });
+});
+
+app.get('/api/customer/me', requireCustomerAuth, async (req, res) => {
+  try {
+    const db = await getDb();
+
+    const customer = await db.get(`
+      SELECT
+        id,
+        name,
+        phone,
+        email,
+        is_active,
+        created_at
+      FROM customers
+      WHERE id = $1
+    `, [req.session.customerId]);
+
+    if (!customer) {
+      req.session.customerId = null;
+
+      return res.status(401).json({
+        error: 'Cliente não encontrado.'
+      });
+    }
+
+    res.json({
+      ok: true,
+      customer
+    });
+
+  } catch (error) {
+    console.error('Erro customer/me:', error);
+
+    res.status(500).json({
+      error: 'Erro ao carregar cliente.'
+    });
+  }
+});
+
+
+
+
+app.get('/api/customer/orders', requireCustomerAuth, async (req, res) => {
+  try {
+    const db = await getDb();
+
+    const orders = await db.all(`
+      SELECT
+        id,
+        customer_name,
+        customer_phone,
+        address,
+        payment,
+        note,
+        total,
+        status,
+        created_at
+      FROM orders
+      WHERE customer_id = $1
+      ORDER BY id DESC
+    `, [req.session.customerId]);
+
+    for (const order of orders) {
+      order.items = await db.all(`
+        SELECT
+          id,
+          product_name,
+          quantity,
+          price
+        FROM order_items
+        WHERE order_id = $1
+        ORDER BY id ASC
+      `, [order.id]);
+    }
+
+    res.json({
+      ok: true,
+      orders
+    });
+
+  } catch (error) {
+    console.error('Erro ao carregar pedidos do cliente:', error);
+
+    res.status(500).json({
+      error: 'Erro ao carregar seus pedidos.'
+    });
+  }
+});
+
+
+
 
 // ================= CATEGORIAS =================
 
@@ -751,13 +1003,25 @@ app.post('/api/admin/categories', requireAuth, async (req, res) => {
 
 // ================= PEDIDOS =================
 
+
+// ================= PEDIDOS =================
+
 app.post('/api/orders', async (req, res) => {
   const db = await getDb();
 
-  const { items, customer_name, customer_phone, address, payment, note } = req.body;
+  const {
+    items,
+    customer_name,
+    customer_phone,
+    address,
+    payment,
+    note
+  } = req.body;
 
   if (!items || items.length === 0) {
-    return res.status(400).json({ error: 'Pedido vazio' });
+    return res.status(400).json({
+      error: 'Pedido vazio'
+    });
   }
 
   let total = 0;
@@ -766,13 +1030,42 @@ app.post('/api/orders', async (req, res) => {
     total += Number(item.price || 0) * Number(item.quantity || 0);
   }
 
+  let customerId = req.session?.customerId || null;
+  let finalCustomerName = customer_name || '';
+  let finalCustomerPhone = customer_phone || '';
+
+  if (customerId) {
+    const customer = await db.get(`
+      SELECT id, name, phone
+      FROM customers
+      WHERE id = $1
+        AND is_active = TRUE
+    `, [customerId]);
+
+    if (customer) {
+      finalCustomerName = customer.name || finalCustomerName;
+      finalCustomerPhone = customer.phone || finalCustomerPhone;
+    } else {
+      customerId = null;
+    }
+  }
+
   const result = await db.get(`
-    INSERT INTO orders (customer_name, customer_phone, address, payment, note, total)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    INSERT INTO orders (
+      customer_id,
+      customer_name,
+      customer_phone,
+      address,
+      payment,
+      note,
+      total
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING id
   `, [
-    customer_name || '',
-    customer_phone || '',
+    customerId,
+    finalCustomerName,
+    finalCustomerPhone,
     address || '',
     payment || '',
     note || '',
@@ -783,7 +1076,12 @@ app.post('/api/orders', async (req, res) => {
 
   for (const item of items) {
     await db.run(`
-      INSERT INTO order_items (order_id, product_name, quantity, price)
+      INSERT INTO order_items (
+        order_id,
+        product_name,
+        quantity,
+        price
+      )
       VALUES ($1, $2, $3, $4)
     `, [
       orderId,
@@ -793,8 +1091,17 @@ app.post('/api/orders', async (req, res) => {
     ]);
   }
 
-  res.json({ ok: true, orderId });
+  res.json({
+    ok: true,
+    orderId,
+    customerId
+  });
 });
+
+
+
+
+
 
 // ================= PEDIDOS ADMIN =================
 

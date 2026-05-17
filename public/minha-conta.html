@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minha Conta | PitStop Manaíra</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    body {
+      background: #f5f9ff;
+    }
+
+    .account-page {
+      width: 92%;
+      max-width: 1100px;
+      margin: 40px auto;
+    }
+
+    .account-header {
+      background: linear-gradient(135deg, #004aad, #0b73d9);
+      color: #fff;
+      border-radius: 26px;
+      padding: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      border-bottom: 6px solid #ffe600;
+      box-shadow: 0 18px 45px rgba(0, 74, 173, .18);
+    }
+
+    .account-header h1 {
+      margin: 0;
+      font-size: 32px;
+    }
+
+    .account-header p {
+      margin-top: 6px;
+      color: #eaf5ff;
+    }
+
+    .account-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .account-actions a,
+    .account-actions button {
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 18px;
+      font-weight: 900;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .back-btn {
+      background: #ffe600;
+      color: #004aad;
+    }
+
+    .logout-btn {
+      background: #ed1c24;
+      color: #fff;
+    }
+
+    .account-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 22px;
+      margin-top: 24px;
+    }
+
+    .account-card {
+      background: #fff;
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 14px 34px rgba(0, 73, 160, .08);
+      border: 1px solid #d9e8f8;
+    }
+
+    .account-card h2 {
+      color: #004aad;
+      margin-bottom: 16px;
+    }
+
+    .info-row {
+      padding: 12px 0;
+      border-bottom: 1px solid #eef4fb;
+    }
+
+    .info-row span {
+      display: block;
+      font-size: 12px;
+      font-weight: 900;
+      color: #617188;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .info-row strong {
+      color: #08224a;
+      font-size: 15px;
+    }
+
+    .orders-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .order-card {
+      border: 1px solid #d9e8f8;
+      border-radius: 18px;
+      padding: 18px;
+      background: #fff;
+    }
+
+    .order-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      border-bottom: 1px solid #eef4fb;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+
+    .order-top strong {
+      color: #004aad;
+      font-size: 18px;
+    }
+
+    .order-top small {
+      display: block;
+      color: #617188;
+      margin-top: 4px;
+    }
+
+    .status {
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .status.novo {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .status.producao {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status.finalizado {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status.cancelado {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .order-items {
+      list-style: none;
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+      padding: 0;
+    }
+
+    .order-items li {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      background: #f8fbff;
+      border-radius: 12px;
+      padding: 10px;
+      color: #08224a;
+    }
+
+    .order-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: #617188;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .order-total {
+      font-size: 18px;
+      font-weight: 900;
+      color: #ed1c24;
+    }
+
+    .empty {
+      padding: 18px;
+      border-radius: 16px;
+      background: #f8fbff;
+      color: #617188;
+      border: 1px dashed #d9e8f8;
+    }
+
+    @media(max-width: 850px) {
+      .account-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .account-actions {
+        width: 100%;
+      }
+
+      .account-actions a,
+      .account-actions button {
+        width: 100%;
+        text-align: center;
+      }
+
+      .account-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .order-top {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="account-page">
+    <section class="account-header">
+      <div>
+        <h1>Minha Conta</h1>
+        <p>Acompanhe seus dados e histórico de pedidos.</p>
+      </div>
+
+      <div class="account-actions">
+        <a href="/" class="back-btn">Voltar para loja</a>
+        <button id="logoutBtn" class="logout-btn">Sair</button>
+      </div>
+    </section>
+
+    <section class="account-grid">
+      <aside class="account-card">
+        <h2>Dados do cliente</h2>
+
+        <div class="info-row">
+          <span>Nome</span>
+          <strong id="customerName">Carregando...</strong>
+        </div>
+
+        <div class="info-row">
+          <span>Telefone</span>
+          <strong id="customerPhone">-</strong>
+        </div>
+
+        <div class="info-row">
+          <span>E-mail</span>
+          <strong id="customerEmail">-</strong>
+        </div>
+
+        <div class="info-row">
+          <span>Cliente desde</span>
+          <strong id="customerCreated">-</strong>
+        </div>
+      </aside>
+
+      <section class="account-card">
+        <h2>Meus pedidos</h2>
+        <div id="ordersList" class="orders-list">
+          <div class="empty">Carregando pedidos...</div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const customerName = document.getElementById('customerName');
+    const customerPhone = document.getElementById('customerPhone');
+    const customerEmail = document.getElementById('customerEmail');
+    const customerCreated = document.getElementById('customerCreated');
+    const ordersList = document.getElementById('ordersList');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    function formatMoney(value) {
+      return Number(value || 0).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      });
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '-';
+
+      return new Date(dateString).toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function statusLabel(status) {
+      const map = {
+        novo: 'Novo',
+        producao: 'Em produção',
+        finalizado: 'Finalizado',
+        cancelado: 'Cancelado'
+      };
+
+      return map[status] || status || 'Novo';
+    }
+
+    async function carregarCliente() {
+      const response = await fetch('/api/customer/me');
+
+      if (!response.ok) {
+        window.location.href = '/cliente-teste.html';
+        return;
+      }
+
+      const data = await response.json();
+      const customer = data.customer;
+
+      customerName.textContent = customer.name || '-';
+      customerPhone.textContent = customer.phone || '-';
+      customerEmail.textContent = customer.email || '-';
+      customerCreated.textContent = formatDate(customer.created_at);
+    }
+
+    async function carregarPedidos() {
+      const response = await fetch('/api/customer/orders');
+
+      if (!response.ok) {
+        ordersList.innerHTML = '<div class="empty">Não foi possível carregar seus pedidos.</div>';
+        return;
+      }
+
+      const data = await response.json();
+      const orders = data.orders || [];
+
+      if (orders.length === 0) {
+        ordersList.innerHTML = '<div class="empty">Você ainda não realizou nenhum pedido.</div>';
+        return;
+      }
+
+      ordersList.innerHTML = '';
+
+      orders.forEach(order => {
+        const div = document.createElement('div');
+        div.className = 'order-card';
+
+        const itemsHtml = (order.items || []).map(item => `
+          <li>
+            <span>${item.quantity}x ${item.product_name}</span>
+            <strong>${formatMoney(Number(item.quantity || 0) * Number(item.price || 0))}</strong>
+          </li>
+        `).join('');
+
+        div.innerHTML = `
+          <div class="order-top">
+            <div>
+              <strong>Pedido #${order.id}</strong>
+              <small>${formatDate(order.created_at)}</small>
+            </div>
+
+            <span class="status ${order.status}">
+              ${statusLabel(order.status)}
+            </span>
+          </div>
+
+          <ul class="order-items">
+            ${itemsHtml}
+          </ul>
+
+          <div class="order-footer">
+            <span>Pagamento: ${order.payment || '-'}</span>
+            <span class="order-total">${formatMoney(order.total)}</span>
+          </div>
+
+          <div class="order-footer">
+            <span>Endereço: ${order.address || 'Retirada na loja'}</span>
+          </div>
+
+          ${order.note ? `
+            <div class="order-footer">
+              <span>Obs.: ${order.note}</span>
+            </div>
+          ` : ''}
+        `;
+
+        ordersList.appendChild(div);
+      });
+    }
+
+    logoutBtn.addEventListener('click', async () => {
+      await fetch('/api/customer/logout', {
+        method: 'POST'
+      });
+
+      window.location.href = '/';
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await carregarCliente();
+      await carregarPedidos();
+    });
+  </script>
+
+</body>
+</html>

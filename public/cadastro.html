@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Criar Conta | PitStop Manaíra</title>
+  <link rel="icon" href="/assets/logo.png" type="image/png">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="login-customer-body">
+
+  <main class="customer-auth-page">
+    <section class="customer-auth-card">
+      <img src="/assets/pitstop-logo.png" alt="PitStop Manaíra" class="customer-auth-logo">
+
+      <span class="customer-auth-badge">Novo cliente</span>
+
+      <h1>Criar minha conta</h1>
+      <p>Cadastre-se para acompanhar seus pedidos e comprar com mais praticidade.</p>
+
+      <form id="registerCustomerForm" class="customer-auth-form">
+        <label for="registerName">Nome completo</label>
+        <input type="text" id="registerName" placeholder="Digite seu nome completo" required>
+
+        <label for="registerPhone">Telefone com DDD</label>
+        <input type="text" id="registerPhone" placeholder="Ex: 83999999999" required>
+
+        <label for="registerEmail">E-mail</label>
+        <input type="email" id="registerEmail" placeholder="Digite seu e-mail">
+
+        <label for="registerPassword">Senha</label>
+        <input type="password" id="registerPassword" placeholder="Mínimo 6 caracteres" required>
+        <label for="registerPasswordConfirm">Confirmar senha</label>
+        <input
+        type="password"
+        id="registerPasswordConfirm"
+        placeholder="Digite a senha novamente"
+        required
+        >
+        <button type="submit">Criar conta</button>
+
+        <span id="registerMsg" class="customer-auth-msg"></span>
+      </form>
+
+      <div class="customer-auth-footer">
+        <span>Já tem conta?</span>
+        <a href="/login.html">Entrar agora</a>
+      </div>
+
+      <a href="/" class="customer-auth-back">← Voltar para loja</a>
+    </section>
+  </main>
+
+  <script>
+    const registerCustomerForm = document.getElementById('registerCustomerForm');
+    const registerMsg = document.getElementById('registerMsg');
+
+    registerCustomerForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      registerMsg.textContent = '';
+      registerMsg.className = 'customer-auth-msg';
+
+      const name = document.getElementById('registerName').value;
+      const phone = document.getElementById('registerPhone').value;
+      const email = document.getElementById('registerEmail').value;
+      const password = document.getElementById('registerPassword').value;
+      const passwordConfirm = document.getElementById('registerPasswordConfirm').value;  
+      if (password !== passwordConfirm) {
+        registerMsg.textContent = 'As senhas não coincidem.';
+        registerMsg.classList.add('error');
+        return;
+        }  
+
+
+      try {
+        const response = await fetch('/api/customer/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name,
+            phone,
+            email,
+            password
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          registerMsg.textContent = data.error || 'Não foi possível criar a conta.';
+          registerMsg.classList.add('error');
+          return;
+        }
+
+        registerMsg.textContent = 'Conta criada com sucesso.';
+        registerMsg.classList.add('success');
+
+        setTimeout(() => {
+          window.location.href = '/minha-conta.html';
+        }, 600);
+
+      } catch (error) {
+        registerMsg.textContent = 'Erro de conexão. Tente novamente.';
+        registerMsg.classList.add('error');
+      }
+      
+    });
+  </script>
+
+</body>
+</html>
